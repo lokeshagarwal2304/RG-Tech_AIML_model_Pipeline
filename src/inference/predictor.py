@@ -206,3 +206,48 @@ class RiceGrainPredictor:
             "raw_heatmap": cam,
             "target_class": self.idx_to_class[class_idx]
         }
+
+    def generate_pixel_segmentation(self, image_input, raw_heatmap=None):
+        """Generates pixel-level optical grain contour and defect segmentation masks."""
+        img = self._load_image(image_input).resize((224, 224))
+        img_np = np.array(img)
+
+        # Grayscale intensity
+        gray = 0.299 * img_np[:, :, 0] + 0.587 * img_np[:, :, 1] + 0.114 * img_np[:, :, 2]
+
+        # Grain body threshold (isolates grain from dark optical tray)
+        threshold = max(35.0, float(np.mean(gray)) * 0.55)
+        grain_mask = (gray > threshold)
+
+        # Morphological border extraction (contour outline)
+        shifted_up = np.roll(grain_mask, -1, axis=0)
+        shifted_down = np.roll(grain_mask, 1, axis=0)
+        shifted_left = np.roll(grain_mask, -1, axis=1)
+        shifted_right = np.roll(grain_mask, 1, axis=1)
+        eroded = grain_mask & shifted_up & shifted_down & shifted_left & shifted_right
+        contour_mask = grain_mask & (~eroded)
+
+        # Defect segmentation mask (using Grad-CAM activation inside grain mask)
+        if raw_heatmap is not None:
+            defect_mask = grain_mask & (raw_heatmap > 0.60)
+        else:
+            defect_mask = np.zeros_like(grain_mask)
+
+        grain_px = int(np.sum(grain_mask))
+        defect_px = int(np.sum(defect_mask))
+        defect_ratio = float(defect_px / (grain_px + 1e-5))
+
+        # Composite visual overlay
+        vis = img_np.copy()
+        vis[contour_mask] = [16, 185, 129]  # Emerald green outline
+
+        if defect_px > 0:
+            # Alpha blend crimson overlay over defect region
+            vis[defect_mask] = (0.45 * vis[defect_mask] + 0.55 * np.array([239, 68, 68])).astype(np.uint8)
+
+        return {
+            "segmented_image": Image.fromarray(vis),
+            "grain_pixel_area": grain_px,
+            "defect_pixel_area": defect_px,
+            "defect_area_ratio": round(defect_ratio * 100, 2)
+        }

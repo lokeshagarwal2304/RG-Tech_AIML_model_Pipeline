@@ -10,6 +10,7 @@ and probabilistic defect breakdowns.
 
 import io
 import os
+import random
 import datetime
 from PIL import Image
 
@@ -21,7 +22,7 @@ from reportlab.platypus import (
 )
 
 
-def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_species="Rice (Oryza sativa)"):
+def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_species="Rice (Oryza sativa)", moisture_info=None, segmented_pil=None):
     """Generates a professional single-page PDF inspection report in memory.
     
     Args:
@@ -29,6 +30,8 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
         gradcam_pil (PIL.Image.Image): Grad-CAM attention heatmap image.
         prediction_result (dict): Output from RiceGrainPredictor.predict().
         grain_species (str): Name of grain species.
+        moisture_info (dict, optional): Output from predict_quality_attributes().
+        segmented_pil (PIL.Image.Image, optional): Pixel segmentation mask overlay.
         
     Returns:
         bytes: Raw PDF file bytes ready for download or saving.
@@ -68,26 +71,26 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
         "SectionHeading",
         parent=styles["Heading2"],
         fontName="Helvetica-Bold",
-        fontSize=12,
-        leading=15,
+        fontSize=11,
+        leading=14,
         textColor=colors.HexColor("#1e293b"),
-        spaceBefore=10,
-        spaceAfter=6
+        spaceBefore=8,
+        spaceAfter=5
     )
     body_style = ParagraphStyle(
         "BodyDark",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=9,
-        leading=13,
+        fontSize=8.5,
+        leading=12,
         textColor=colors.HexColor("#334155")
     )
     bold_label = ParagraphStyle(
         "BoldLabel",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=9,
-        leading=13,
+        fontSize=8.5,
+        leading=12,
         textColor=colors.HexColor("#0f172a")
     )
 
@@ -95,7 +98,7 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
 
     # 1. Header & Branding Banner
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cert_id = f"GS-{datetime.datetime.now().strftime('%Y%m%d')}-{prediction_result['predicted_code'][:2]}"
+    cert_id = f"GS-{datetime.datetime.now().strftime('%Y%m%d')}-{prediction_result['predicted_code'][:2]}-{random.randint(100, 999)}"
 
     header_data = [
         [
@@ -121,6 +124,9 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
     grade_color_hex = grading.get("grade_color", "#3b82f6")
     action_verdict = grading.get("actionable_verdict", "N/A")
 
+    moisture_str = f"<b>{moisture_info['estimated_moisture_pct']}%</b> ({moisture_info['moisture_status']})" if moisture_info else "Standard Storage Range (12-14%)"
+    shelf_life_str = moisture_info.get("storage_life_estimate", "6 - 12 Months") if moisture_info else "Standard"
+
     summary_rows = [
         [
             Paragraph("<b>Target Grain Species</b>", bold_label),
@@ -139,6 +145,12 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
             Paragraph(f"<code>{prediction_result['predicted_code']}</code>", body_style),
             Paragraph("<b>Compliance Standards</b>", bold_label),
             Paragraph(grading.get("standards_body", "AGMARK &amp; USDA Commercial Grain Standards"), body_style)
+        ],
+        [
+            Paragraph("<b>Estimated Moisture %</b>", bold_label),
+            Paragraph(moisture_str, body_style),
+            Paragraph("<b>Preservation Shelf-Life</b>", bold_label),
+            Paragraph(shelf_life_str, body_style)
         ]
     ]
 
@@ -147,14 +159,14 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
         ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#e2e8f0")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(summary_table)
 
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     # 3. Actionable Recommendation Callout Box
     rec_box_data = [[
@@ -164,45 +176,53 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
     rec_box.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
         ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#cbd5e1")),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
     ]))
     story.append(rec_box)
 
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    # 4. Visual Evidence Section (Side-by-Side: Original vs Grad-CAM)
-    story.append(Paragraph("Visual Evidence &amp; Explainable AI (Grad-CAM Defect Attention Map)", section_style))
+    # 4. Visual Evidence Section: 3 Images (Optical, Grad-CAM, Segmentation)
+    story.append(Paragraph("Visual Evidence: Optical Crop &bull; Grad-CAM Hotspot &bull; Pixel Segmentation Mask", section_style))
 
-    # Convert PIL images to ReportLab Flowables via BytesIO
     orig_buf = io.BytesIO()
-    original_pil.resize((200, 200)).save(orig_buf, format="PNG")
+    original_pil.resize((160, 160)).save(orig_buf, format="PNG")
     orig_buf.seek(0)
-    rl_orig = RLImage(orig_buf, width=170, height=170)
+    rl_orig = RLImage(orig_buf, width=150, height=150)
 
     if gradcam_pil is not None:
         cam_buf = io.BytesIO()
-        gradcam_pil.resize((200, 200)).save(cam_buf, format="PNG")
+        gradcam_pil.resize((160, 160)).save(cam_buf, format="PNG")
         cam_buf.seek(0)
-        rl_cam = RLImage(cam_buf, width=170, height=170)
+        rl_cam = RLImage(cam_buf, width=150, height=150)
     else:
         rl_cam = Paragraph("Grad-CAM Disabled", body_style)
 
+    if segmented_pil is not None:
+        seg_buf = io.BytesIO()
+        segmented_pil.resize((160, 160)).save(seg_buf, format="PNG")
+        seg_buf.seek(0)
+        rl_seg = RLImage(seg_buf, width=150, height=150)
+    else:
+        rl_seg = Paragraph("Segmentation N/A", body_style)
+
     img_table_data = [
-        [rl_orig, rl_cam],
+        [rl_orig, rl_cam, rl_seg],
         [
-            Paragraph("<font size='8' color='#64748b'><b>Original Optical Crop</b> (SquarePad 224x224)</font>", body_style),
-            Paragraph("<font size='8' color='#64748b'><b>Grad-CAM Hotspot Map</b> (Identified Defect Region)</font>", body_style)
+            Paragraph("<font size='7' color='#64748b'><b>1. Optical Crop</b> (224x224)</font>", body_style),
+            Paragraph("<font size='7' color='#64748b'><b>2. Grad-CAM XAI</b> (Attention Heatmap)</font>", body_style),
+            Paragraph("<font size='7' color='#64748b'><b>3. Pixel Segmentation</b> (Boundary + Mask)</font>", body_style)
         ]
     ]
-    img_table = Table(img_table_data, colWidths=[270, 270])
+    img_table = Table(img_table_data, colWidths=[180, 180, 180])
     img_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     story.append(img_table)
 

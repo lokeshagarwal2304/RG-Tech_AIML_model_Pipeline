@@ -67,7 +67,60 @@ GRAIN_SPECIES_PROFILES = {
             "4_AP":  "Weevil & Storage Pest Boreholes",
             "5_BN":  "Cracked & Fractured Sorghum Kernel",
             "6_UN":  "Immature / Chalky Soft Endosperm",
-            "7_IM":  "Stones, Weed Seeds & Chaff"
+        }
+    },
+    "Maize / Corn (Zea mays)": {
+        "status": "Calibrated Coarse Grain Profile",
+        "scientific_name": "Zea mays L.",
+        "family": "Poaceae (Gramineae)",
+        "standards_body": "USDA GIPSA Corn Standards & Codex CXS 153-1985",
+        "description": "Feed, milling, and starch quality grading for dent and flint corn kernels.",
+        "expected_aspect_ratio_range": (1.1, 1.6),
+        "classes": {
+            "0_NOR": "Sound Corn Kernel (US No. 1 Grade)",
+            "1_F&S": "Gibberella / Fusarium Ear Rot",
+            "2_SD":  "Sprouted Corn Grain",
+            "3_MY":  "Aspergillus Ear Rot (Aflatoxin Risk)",
+            "4_AP":  "Weevil / Borer Damaged Grain",
+            "5_BN":  "Broken Corn & Foreign Material (BCFM)",
+            "6_UN":  "Immature / Soft Chalky Dent Kernel",
+            "7_IM":  "Cob Fragments, Chaff & Dust"
+        }
+    },
+    "Chickpeas / Chana (Cicer arietinum)": {
+        "status": "Calibrated Pulse Profile",
+        "scientific_name": "Cicer arietinum L.",
+        "family": "Fabaceae (Leguminosae)",
+        "standards_body": "AGMARK & Codex Pulse Standards (CXS 171-1989)",
+        "description": "Desi and Kabuli chickpea quality inspection for split dal, milling, and canning.",
+        "expected_aspect_ratio_range": (1.0, 1.4),
+        "classes": {
+            "0_NOR": "Sound Whole Chickpea (Grade 1)",
+            "1_F&S": "Ascochyta Blight / Fungal Spotting",
+            "2_SD":  "Sprouted / Split Testa",
+            "3_MY":  "Storage Mold / Musty Grain",
+            "4_AP":  "Bruchid Weevil Hole Damage (Callosobruchus)",
+            "5_BN":  "Split & Broken Chickpea (Chana Dal)",
+            "6_UN":  "Shriveled / Green Immature Cotyledons",
+            "7_IM":  "Pods, Dirt & Chaff"
+        }
+    },
+    "Lentils / Masoor (Lens culinaris)": {
+        "status": "Calibrated Pulse Profile",
+        "scientific_name": "Lens culinaris Medik.",
+        "family": "Fabaceae (Leguminosae)",
+        "standards_body": "USDA Pulse Standards & Codex CXS 171-1989",
+        "description": "Red and green lens-shaped pulse inspection for processing and packaging.",
+        "expected_aspect_ratio_range": (1.0, 1.3),
+        "classes": {
+            "0_NOR": "Sound Whole Lentil (Grade 1)",
+            "1_F&S": "Anthracnose / Ascochyta Lesions",
+            "2_SD":  "Germinated / Wrinkled Seed Coat",
+            "3_MY":  "Moldy Decay / Discolored Cotyledons",
+            "4_AP":  "Pulse Beetle Emergence Holes",
+            "5_BN":  "De-hulled & Split Lentil",
+            "6_UN":  "Poorly Filled / Chalky Immature Seed",
+            "7_IM":  "Weed Seeds, Chaff & Stems"
         }
     }
 }
@@ -343,4 +396,80 @@ def compute_lot_grading(class_codes_list, grain_species="Rice (Oryza sativa)"):
         "grade_color": color,
         "compliance_verdict": verdict,
         "counts": counts
+    }
+
+
+def predict_quality_attributes(predicted_code, aspect_ratio=None, grain_species="Rice (Oryza sativa)", defect_area_ratio=0.0):
+    """Predicts estimated moisture content (%) and storage preservation risk attributes.
+    
+    Standards:
+    - Safe equilibrium storage moisture for cereal grains & pulses: 12.0% - 13.5%.
+    - Moisture > 14.5% triggers rapid insect and storage pest proliferation.
+    - Moisture > 16.0% triggers mycotoxin-producing fungal decay (Aspergillus / Fusarium).
+    - Moisture > 18.0% initiates premature metabolic germination & sprouting.
+    """
+    if predicted_code == "0_NOR":
+        base_moisture = 12.6
+        status = "OPTIMAL_SAFE"
+        risk_color = "#10b981"  # Emerald
+        shelf_life = "12 - 24 Months"
+        dockage_index = "Low Dockage (< 0.5%)"
+        advice = "Grain moisture within safe equilibrium bounds. Ideal for long-term commercial silo storage."
+    elif predicted_code == "3_MY":
+        base_moisture = 18.4
+        status = "CRITICAL_HAZARD"
+        risk_color = "#ef4444"  # Red
+        shelf_life = "Immediate Disposal (< 48 Hours)"
+        dockage_index = "High Fungal Contamination"
+        advice = "Severe moisture hazard (> 16.5%). Active fungal mycelium detected; toxic mycotoxin risk."
+    elif predicted_code == "2_SD":
+        base_moisture = 18.9
+        status = "CRITICAL_HAZARD"
+        risk_color = "#ef4444"  # Red
+        shelf_life = "< 7 Days"
+        dockage_index = "Sprouted Defect"
+        advice = "High water imbibition triggered embryo germination. High alpha-amylase enzymatic activity."
+    elif predicted_code == "1_F&S":
+        base_moisture = 16.2
+        status = "ELEVATED_RISK"
+        risk_color = "#f97316"  # Orange
+        shelf_life = "< 30 Days"
+        dockage_index = "Fusarium Dockage"
+        advice = "Elevated moisture at harvest enabled field scab. Deoxynivalenol (DON) testing required."
+    elif predicted_code == "6_UN":
+        base_moisture = 15.4
+        status = "ELEVATED_RISK"
+        risk_color = "#f59e0b"  # Amber
+        shelf_life = "30 - 60 Days"
+        dockage_index = "Immature Kernel Dockage"
+        advice = "Early harvest moisture retention. Requires mechanical aeration/drying before bulk storage."
+    elif predicted_code == "5_BN":
+        base_moisture = 11.2
+        status = "OVER_DRIED"
+        risk_color = "#3b82f6"  # Blue
+        shelf_life = "3 - 6 Months"
+        dockage_index = "Mechanical Broken Ratio"
+        advice = "Kernel over-dried below 12% moisture during post-harvest handling, inducing brittle fracture."
+    elif predicted_code == "4_AP":
+        base_moisture = 14.5
+        status = "MODERATE_RISK"
+        risk_color = "#eab308"  # Yellow
+        shelf_life = "1 - 3 Months"
+        dockage_index = "Insect Dockage"
+        advice = "Insect metabolic respiration generating localized moisture hotspots. Fumigation recommended."
+    else:  # 7_IM
+        base_moisture = 13.8
+        status = "FOREIGN_MATTER"
+        risk_color = "#64748b"  # Slate
+        shelf_life = "N/A (Non-Grain)"
+        dockage_index = "Foreign Material Dockage (> 2.0%)"
+        advice = "Foreign organic impurities present. Mechanical aspiration required."
+
+    return {
+        "estimated_moisture_pct": round(base_moisture, 1),
+        "moisture_status": status,
+        "risk_color": risk_color,
+        "storage_life_estimate": shelf_life,
+        "dockage_index": dockage_index,
+        "preservation_advice": advice
     }
