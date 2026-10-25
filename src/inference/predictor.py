@@ -1,19 +1,30 @@
 """
-Rice Grain Classifier Inference Engine
-Project: Multi-Food-Grain Quality Analysis and Prediction Using Advanced Diffusion Models
-
+GrainSight AI: Multi-Food-Grain Inference Engine with Grad-CAM Explainability
+Project: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning
 Author: Senior PyTorch Computer Vision Engineer
+
 Description:
-    Production-ready inference module that loads the trained MobileNetV3-Small
-    checkpoint once per session, applies exact aspect-ratio preserving preprocessing,
-    and returns predictions, confidence, and Top-3 probabilities with human-readable labels.
+    Production inference module featuring:
+    - Cached singleton model loading (MobileNetV3-Small)
+    - Aspect-ratio preserving SquarePad preprocessing
+    - Top-3 class probability distribution
+    - Grad-CAM (XAI) visual defect attention maps
+    - AGMARK / USDA Commercial Grade assignment
 """
 
 import os
 import sys
 import torch
 import torch.nn.functional as F
+import numpy as np
 from PIL import Image
+
+def _jet_colormap_numpy(val):
+    """Pure NumPy Jet colormap (Blue -> Cyan -> Yellow -> Red) without external dependencies."""
+    r = np.clip(1.5 - np.abs(4.0 * val - 3.0), 0.0, 1.0)
+    g = np.clip(1.5 - np.abs(4.0 * val - 2.0), 0.0, 1.0)
+    b = np.clip(1.5 - np.abs(4.0 * val - 1.0), 0.0, 1.0)
+    return np.stack([r, g, b], axis=-1)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
@@ -21,6 +32,7 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 
 from data.rice_dataset import get_transforms, SquarePad, CLASS_NAMES
 from models.classifier import build_mobilenet_v3_small
+from inference.grading import grade_single_kernel, GRAIN_SPECIES_PROFILES
 
 # Human-Readable Category Names and Descriptions
 HUMAN_LABELS = {
@@ -36,9 +48,9 @@ HUMAN_LABELS = {
 
 
 class RiceGrainPredictor:
-    """Inference wrapper for the trained MobileNetV3-Small model."""
+    """Inference wrapper for MobileNetV3-Small with Grad-CAM and Grading."""
 
-    _instance = None  # Singleton instance to ensure model loads only once per process
+    _instance = None  # Singleton instance
 
     def __init__(self, checkpoint_path=None, device="cpu"):
         if checkpoint_path is None:
@@ -66,7 +78,7 @@ class RiceGrainPredictor:
         self.model.to(self.device)
         self.model.eval()
 
-        # Deterministic evaluation transform (SquarePad + Resize(224) + ImageNet Normalize)
+        # Deterministic evaluation transform
         self.transform = get_transforms(split="test", target_size=self.preprocessing_cfg.get("target_size", 224))
 
     @classmethod
@@ -76,44 +88,26 @@ class RiceGrainPredictor:
             cls._instance = cls(checkpoint_path=checkpoint_path, device=device)
         return cls._instance
 
-    def predict(self, image_input):
-        """Runs single-grain classification inference.
-        
-        Args:
-            image_input (str, Path, or PIL.Image.Image): File path or loaded PIL Image.
-            
-        Returns:
-            dict containing:
-                - predicted_code: e.g. '0_NOR'
-                - human_label: e.g. 'Normal Grain (Sound / Healthy)'
-                - confidence: float between 0.0 and 1.0
-                - top3_predictions: list of Top-3 dicts with code, label, and probability
-                - all_probabilities: dict mapping all 8 class codes to probabilities
-        """
-        # 1. Image Loading and Validation
+    def _load_image(self, image_input):
         if isinstance(image_input, (str, os.PathLike)):
             if not os.path.exists(image_input):
                 raise FileNotFoundError(f"Input image not found: {image_input}")
-            try:
-                img = Image.open(image_input).convert("RGB")
-            except Exception as e:
-                raise ValueError(f"Could not open image file: {e}")
+            return Image.open(image_input).convert("RGB")
         elif isinstance(image_input, Image.Image):
-            img = image_input.convert("RGB")
+            return image_input.convert("RGB")
         else:
-            raise TypeError(f"Unsupported image input type: {type(image_input)}. Expected path or PIL Image.")
+            raise TypeError(f"Unsupported image type: {type(image_input)}")
 
-        # 2. Preprocess
+    def predict(self, image_input):
+        """Runs single-grain classification and commercial grading inference."""
+        img = self._load_image(image_input)
         tensor = self.transform(img).unsqueeze(0).to(self.device)
 
-        # 3. Model Forward Pass
         with torch.no_grad():
             logits = self.model(tensor)
             probs = F.softmax(logits, dim=1).squeeze(0)
 
-        # 4. Format Results
         all_probs = {self.idx_to_class[i]: float(probs[i].item()) for i in range(len(self.class_names))}
-
         top_k = torch.topk(probs, k=min(3, len(self.class_names)))
         top3 = []
         for p, idx in zip(top_k.values.tolist(), top_k.indices.tolist()):
@@ -129,11 +123,74 @@ class RiceGrainPredictor:
         best_code = self.idx_to_class[best_idx]
         best_confidence = float(top_k.values[0].item())
 
+        # Commercial grade assignment
+        grade_info = grade_single_kernel(best_code, best_confidence)
+
         return {
             "predicted_code": best_code,
             "human_label": HUMAN_LABELS.get(best_code, best_code),
             "confidence": round(best_confidence, 4),
             "confidence_percentage": round(best_confidence * 100, 2),
             "top3_predictions": top3,
-            "all_probabilities": {k: round(v, 4) for k, v in all_probs.items()}
+            "all_probabilities": {k: round(v, 4) for k, v in all_probs.items()},
+            "grading": grade_info
+        }
+
+    def generate_gradcam(self, image_input, target_class_code=None):
+        """Generates Explainable AI (Grad-CAM) visual attention heatmap.
+        
+        Highlights the exact morphological defect region on the grain kernel.
+        """
+        img = self._load_image(image_input)
+        tensor = self.transform(img).unsqueeze(0).to(self.device)
+
+        activations = []
+        gradients = []
+
+        def forward_hook(m, inp, out):
+            activations.append(out)
+
+        def backward_hook(m, grad_in, grad_out):
+            gradients.append(grad_out[0])
+
+        target_layer = self.model.features[-1]
+        fwd_handle = target_layer.register_forward_hook(forward_hook)
+        bwd_handle = target_layer.register_full_backward_hook(backward_hook)
+
+        self.model.zero_grad()
+        logits = self.model(tensor)
+
+        if target_class_code is not None and target_class_code in self.class_to_idx:
+            class_idx = self.class_to_idx[target_class_code]
+        else:
+            class_idx = logits.argmax(dim=1).item()
+
+        score = logits[0, class_idx]
+        score.backward()
+
+        fwd_handle.remove()
+        bwd_handle.remove()
+
+        act = activations[0].detach()  # [1, 576, 7, 7]
+        grad = gradients[0].detach()   # [1, 576, 7, 7]
+
+        # Channel-wise global average pooling of gradients
+        weights = grad.mean(dim=(2, 3), keepdim=True)
+        cam = (weights * act).sum(dim=1, keepdim=True)
+        cam = F.relu(cam)
+        cam = F.interpolate(cam, size=(224, 224), mode="bilinear", align_corners=False)
+        cam = cam.squeeze().cpu().numpy()
+        cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
+
+        # Apply Jet Colormap and blend with original image
+        heatmap_rgb = _jet_colormap_numpy(cam)  # [224, 224, 3] in [0, 1]
+        orig_resized = np.array(img.resize((224, 224))) / 255.0
+        blended = 0.55 * orig_resized + 0.45 * heatmap_rgb
+        blended = (np.clip(blended, 0.0, 1.0) * 255).astype(np.uint8)
+
+        blended_pil = Image.fromarray(blended)
+        return {
+            "blended_image": blended_pil,
+            "raw_heatmap": cam,
+            "target_class": self.idx_to_class[class_idx]
         }
