@@ -1,0 +1,178 @@
+{
+  "model_architecture": "MobileNetV3-Small",
+  "num_classes": 8,
+  "seed": 42,
+  "epochs": 3,
+  "batch_size": 64,
+  "device": "cpu",
+  "total_training_time_seconds": 1768.48,
+  "epoch_history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.927,
+      "val_loss": 1.8053,
+      "val_accuracy": 0.6525,
+      "val_macro_f1": 0.1166,
+      "epoch_time_sec": 581.94,
+      "is_best": true
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.5041,
+      "val_loss": 2.647,
+      "val_accuracy": 0.2108,
+      "val_macro_f1": 0.2058,
+      "epoch_time_sec": 551.77,
+      "is_best": true
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.3648,
+      "val_loss": 0.3647,
+      "val_accuracy": 0.8859,
+      "val_macro_f1": 0.7766,
+      "epoch_time_sec": 560.68,
+      "is_best": true
+    }
+  ],
+  "best_epoch": 3,
+  "best_val_macro_f1": 0.7766,
+  "test_metrics": {
+    "loss": 0.3294,
+    "accuracy": 0.8974,
+    "macro_f1": 0.7968,
+    "per_class": {
+      "0_NOR": {
+        "precision": 0.9805,
+        "recall": 0.944,
+        "f1": 0.9619,
+        "support": 3196
+      },
+      "1_F&S": {
+        "precision": 0.7489,
+        "recall": 0.7269,
+        "f1": 0.7377,
+        "support": 238
+      },
+      "2_SD": {
+        "precision": 0.8824,
+        "recall": 0.4393,
+        "f1": 0.5866,
+        "support": 239
+      },
+      "3_MY": {
+        "precision": 0.7581,
+        "recall": 0.7705,
+        "f1": 0.7642,
+        "support": 244
+      },
+      "4_AP": {
+        "precision": 0.574,
+        "recall": 0.9132,
+        "f1": 0.7049,
+        "support": 242
+      },
+      "5_BN": {
+        "precision": 0.8421,
+        "recall": 0.8703,
+        "f1": 0.856,
+        "support": 239
+      },
+      "6_UN": {
+        "precision": 0.6959,
+        "recall": 0.9328,
+        "f1": 0.7971,
+        "support": 238
+      },
+      "7_IM": {
+        "precision": 0.9511,
+        "recall": 0.9811,
+        "f1": 0.9658,
+        "support": 317
+      }
+    },
+    "confusion_matrix": [
+      [
+        3017,
+        1,
+        0,
+        1,
+        116,
+        31,
+        30,
+        0
+      ],
+      [
+        3,
+        173,
+        6,
+        24,
+        15,
+        0,
+        17,
+        0
+      ],
+      [
+        31,
+        45,
+        105,
+        19,
+        27,
+        2,
+        7,
+        3
+      ],
+      [
+        17,
+        9,
+        8,
+        188,
+        2,
+        3,
+        14,
+        3
+      ],
+      [
+        7,
+        2,
+        0,
+        3,
+        221,
+        0,
+        9,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        208,
+        20,
+        10
+      ],
+      [
+        1,
+        1,
+        0,
+        12,
+        2,
+        0,
+        222,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        2,
+        3,
+        0,
+        311
+      ]
+    ],
+    "sample_count": 4953
+  }
+}
