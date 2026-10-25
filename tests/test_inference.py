@@ -72,8 +72,19 @@ def run_inference_smoke_test():
         print(f"    {rank}. {item['class_code']}: {item['percentage']}% ({item['label']})")
     print("  -> PASSED: Defect sample classified successfully.\n")
 
-    # 4. Test Error Handling
-    print("[TEST 4/4] Testing error handling on nonexistent image...")
+    # 4. Test Grad-CAM Explainable AI (XAI)
+    print("[TEST 4/5] Testing Grad-CAM heatmap generation...")
+    cam_res = predictor.generate_gradcam(sample_broken)
+    assert cam_res is not None, "Grad-CAM generation returned None"
+    assert "raw_heatmap" in cam_res, "Grad-CAM missing raw_heatmap"
+    assert "blended_image" in cam_res, "Grad-CAM missing blended_image"
+    assert cam_res["blended_image"].size == (224, 224), f"Expected 224x224, got {cam_res['blended_image'].size}"
+    print(f"  - Grad-CAM heatmap target layer: features[11]")
+    print(f"  - Blended image size: {cam_res['blended_image'].size}")
+    print("  -> PASSED: Grad-CAM Explainable AI generates valid blended heatmap.\n")
+
+    # 5. Test Error Handling
+    print("[TEST 5/5] Testing error handling on nonexistent image...")
     try:
         predictor.predict("nonexistent_image_12345.png")
         raise AssertionError("Failed to raise FileNotFoundError on missing image!")

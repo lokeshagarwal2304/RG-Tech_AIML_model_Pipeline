@@ -59,7 +59,7 @@ GRAIN_SPECIES_PROFILES = {
 }
 
 
-def grade_single_kernel(predicted_code, confidence):
+def grade_single_kernel(predicted_code, confidence=1.0):
     """Computes single-kernel commercial grade and actionable advice."""
     if predicted_code == "0_NOR":
         return {
