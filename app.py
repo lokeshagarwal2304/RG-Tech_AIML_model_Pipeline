@@ -175,24 +175,24 @@ def run_streamlit_app():
         if "Wheat" in selected_species:
             sample_options = {
                 "-- Upload custom wheat image --": None,
-                "Sample 1: Sound Wheat Grain (US No. 1 Food Grade)": "data/rice/test/0_NOR/Grainset_rice_2020-02-12-18-18-42_1_p600s.png",
-                "Sample 2: Shrunken & Broken Wheat Kernel": "data/rice/test/5_BN/Grainset_rice_2020-02-13-14-38-04_1_p600s.png",
-                "Sample 3: Mold-Contaminated / Black Point Wheat": "data/rice/test/3_MY/Grainset_rice_2020-02-13-16-11-20_4_p600s.png",
-                "Sample 4: Sprout-Damaged Wheat Kernel (Alpha-Amylase)": "data/rice/test/2_SD/Grainset_rice_2020-02-12-18-18-42_0_p600s.png",
-                "Sample 5: Insect-Bitten / Weevil-Bored Grain": "data/rice/test/4_AP/Grainset_rice_2020-02-13-15-45-32_1_p600s.png",
-                "Sample 6: Tombstone Scab / Fusarium Head Blight": "data/rice/test/1_F&S/Grainset_rice_2020-02-14-14-55-35_0_p600s.png",
-                "Sample 7: Dockage, Chaff & Foreign Material": "data/rice/test/7_IM/Grainset_rice_2020-02-13-10-33-33_1_p600s.png"
+                "Sample 1: Sound Wheat Grain (US No. 1 Food Grade)": "data/wheat/0_NOR/grain_wheat_0_NOR_1.png",
+                "Sample 2: Shrunken & Broken Wheat Kernel": "data/wheat/5_BN/grain_wheat_5_BN_1.png",
+                "Sample 3: Mold-Contaminated / Black Point Wheat": "data/wheat/3_MY/grain_wheat_3_MY_1.png",
+                "Sample 4: Sprout-Damaged Wheat Kernel (Alpha-Amylase)": "data/wheat/2_SD/grain_wheat_2_SD_1.png",
+                "Sample 5: Insect-Bitten / Weevil-Bored Grain": "data/wheat/4_AP/grain_wheat_4_AP_1.png",
+                "Sample 6: Tombstone Scab / Fusarium Head Blight": "data/wheat/1_F&S/grain_wheat_1_F&S_1.png",
+                "Sample 7: Dockage, Chaff & Foreign Material": "data/wheat/7_IM/grain_wheat_7_IM_1.png"
             }
         elif "Sorghum" in selected_species:
             sample_options = {
                 "-- Upload custom sorghum image --": None,
-                "Sample 1: Sound Sorghum Grain (Codex Grade 1)": "data/rice/test/0_NOR/Grainset_rice_2020-02-12-18-18-42_1_p600s.png",
-                "Sample 2: Cracked & Fractured Sorghum Kernel": "data/rice/test/5_BN/Grainset_rice_2020-02-13-14-38-04_1_p600s.png",
-                "Sample 3: Field Fungi & Mold-Decayed Sorghum": "data/rice/test/3_MY/Grainset_rice_2020-02-13-16-11-20_4_p600s.png",
-                "Sample 4: Premature Sprouted Sorghum": "data/rice/test/2_SD/Grainset_rice_2020-02-12-18-18-42_0_p600s.png",
-                "Sample 5: Weevil-Bored / Pest-Damaged Sorghum": "data/rice/test/4_AP/Grainset_rice_2020-02-13-15-45-32_1_p600s.png",
-                "Sample 6: Head Blight / Ergot Fungal Infection": "data/rice/test/1_F&S/Grainset_rice_2020-02-14-14-55-35_0_p600s.png",
-                "Sample 7: Non-Grain Impurities & Chaff": "data/rice/test/7_IM/Grainset_rice_2020-02-13-10-33-33_1_p600s.png"
+                "Sample 1: Sound Sorghum Grain (Codex Grade 1)": "data/sorghum/0_NOR/grain_sorghum_0_NOR_1.png",
+                "Sample 2: Cracked & Fractured Sorghum Kernel": "data/sorghum/5_BN/grain_sorghum_5_BN_1.png",
+                "Sample 3: Field Fungi & Mold-Decayed Sorghum": "data/sorghum/3_MY/grain_sorghum_3_MY_1.png",
+                "Sample 4: Premature Sprouted Sorghum": "data/sorghum/2_SD/grain_sorghum_2_SD_1.png",
+                "Sample 5: Weevil-Bored / Pest-Damaged Sorghum": "data/sorghum/4_AP/grain_sorghum_4_AP_1.png",
+                "Sample 6: Head Blight / Ergot Fungal Infection": "data/sorghum/1_F&S/grain_sorghum_1_F&S_1.png",
+                "Sample 7: Non-Grain Impurities & Chaff": "data/sorghum/7_IM/grain_sorghum_7_IM_1.png"
             }
         else:  # Rice (Oryza sativa)
             sample_options = {
@@ -335,7 +335,13 @@ def run_streamlit_app():
         st.markdown(f"Simulate optical inspection across a commercial batch (20 random test kernels) to evaluate aggregate grade under **{profile['standards_body']}**.")
         if st.button(f"Run {selected_species.split(' ')[0]} Batch Lot Simulation"):
             with st.spinner(f"Scanning commercial {selected_species.split(' ')[0]} lot kernels..."):
-                test_dir = os.path.join(PROJECT_ROOT, "data", "rice", "test")
+                if "Wheat" in selected_species:
+                    test_dir = os.path.join(PROJECT_ROOT, "data", "wheat")
+                elif "Sorghum" in selected_species:
+                    test_dir = os.path.join(PROJECT_ROOT, "data", "sorghum")
+                else:
+                    test_dir = os.path.join(PROJECT_ROOT, "data", "rice", "test")
+
                 all_test_images = glob.glob(os.path.join(test_dir, "*", "*.png"))
                 
                 random.seed(42)

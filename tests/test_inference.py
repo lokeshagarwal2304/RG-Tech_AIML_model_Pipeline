@@ -73,7 +73,7 @@ def run_inference_smoke_test():
     print("  -> PASSED: Defect sample classified successfully.\n")
 
     # 4. Test Grad-CAM Explainable AI (XAI)
-    print("[TEST 4/5] Testing Grad-CAM heatmap generation...")
+    print("[TEST 4/6] Testing Grad-CAM heatmap generation...")
     cam_res = predictor.generate_gradcam(sample_broken)
     assert cam_res is not None, "Grad-CAM generation returned None"
     assert "raw_heatmap" in cam_res, "Grad-CAM missing raw_heatmap"
@@ -83,8 +83,26 @@ def run_inference_smoke_test():
     print(f"  - Blended image size: {cam_res['blended_image'].size}")
     print("  -> PASSED: Grad-CAM Explainable AI generates valid blended heatmap.\n")
 
-    # 5. Test Error Handling
-    print("[TEST 5/5] Testing error handling on nonexistent image...")
+    # 5. Test Physical Multi-Grain Samples (Wheat & Sorghum)
+    print("[TEST 5/6] Testing Multi-Grain physical sample evaluation (Wheat & Sorghum)...")
+    sample_wheat = os.path.join(PROJECT_ROOT, "data", "wheat", "0_NOR", "grain_wheat_0_NOR_1.png")
+    assert os.path.exists(sample_wheat), f"Physical wheat sample not found: {sample_wheat}"
+    res_w = predictor.predict(sample_wheat, grain_species="Wheat (Triticum aestivum)")
+    assert res_w["grain_species"] == "Wheat (Triticum aestivum)"
+    assert "grading" in res_w
+    assert "standards_body" in res_w["grading"]
+    print(f"  - Wheat Sample: {os.path.basename(sample_wheat)} -> Grade: {res_w['grading']['grade_badge']}")
+
+    sample_sorghum = os.path.join(PROJECT_ROOT, "data", "sorghum", "0_NOR", "grain_sorghum_0_NOR_1.png")
+    assert os.path.exists(sample_sorghum), f"Physical sorghum sample not found: {sample_sorghum}"
+    res_s = predictor.predict(sample_sorghum, grain_species="Sorghum (Sorghum bicolor)")
+    assert res_s["grain_species"] == "Sorghum (Sorghum bicolor)"
+    assert "grading" in res_s
+    print(f"  - Sorghum Sample: {os.path.basename(sample_sorghum)} -> Grade: {res_s['grading']['grade_badge']}")
+    print("  -> PASSED: Physical Multi-Grain samples verified.\n")
+
+    # 6. Test Error Handling
+    print("[TEST 6/6] Testing error handling on nonexistent image...")
     try:
         predictor.predict("nonexistent_image_12345.png")
         raise AssertionError("Failed to raise FileNotFoundError on missing image!")

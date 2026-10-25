@@ -2,7 +2,7 @@
 .venv/
 
 # Datasets and large data files
-data/
+data/rice/
 *.zip
 rice_colab_train_bundle.zip
 
