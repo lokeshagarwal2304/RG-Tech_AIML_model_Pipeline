@@ -138,7 +138,7 @@ def generate_inspection_pdf(original_pil, gradcam_pil, prediction_result, grain_
             Paragraph("<b>Dataset Class Code</b>", bold_label),
             Paragraph(f"<code>{prediction_result['predicted_code']}</code>", body_style),
             Paragraph("<b>Compliance Standards</b>", bold_label),
-            Paragraph("AGMARK &amp; USDA Commercial Grain Standards", body_style)
+            Paragraph(grading.get("standards_body", "AGMARK &amp; USDA Commercial Grain Standards"), body_style)
         ]
     ]
 

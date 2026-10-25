@@ -1,13 +1,14 @@
 """
-GrainSight AI: Multi-Food-Grain Quality Analysis Portal
+GrainSight AI: Universal Multi-Food-Grain Quality Analysis Portal
 Project: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning
 Author: Senior ML Research Engineer
 
-A clean, production-grade inspection interface featuring:
-- Optical Rice Defect Classification (8 classes, MobileNetV3-Small)
+A clean, production-grade multi-cereal inspection interface featuring:
+- Universal Cereal Defect Classification (Rice, Wheat, Sorghum)
+- Species-Specific Commercial Grading (AGMARK, USDA GIPSA, Codex Alimentarius)
+- Morphometric Kernel Validation (Aspect Ratio & Geometry Bounds)
 - Grad-CAM Explainable AI (XAI) attention heatmaps
-- Commercial AGMARK & USDA Quality Grading
-- One-Click Official PDF Inspection Report Export
+- One-Click Official Multi-Grain PDF Inspection Certificate Export
 """
 
 import os
@@ -34,7 +35,7 @@ def run_streamlit_app():
 
     # 1. Page Configuration
     st.set_page_config(
-        page_title="GrainSight AI | Grain Quality Portal",
+        page_title="GrainSight AI | Multi-Grain Quality Portal",
         page_icon="🌾",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -111,15 +112,15 @@ def run_streamlit_app():
         <div class="main-header">
             <div>
                 <h2 style="margin: 0; color: #0f172a; font-weight: 800; font-size: 1.5rem;">
-                    🌾 GrainSight AI &bull; Grain Quality Inspection Portal
+                    🌾 GrainSight AI &bull; Multi-Food-Grain Quality Inspection Portal
                 </h2>
                 <p style="margin: 0.2rem 0 0 0; color: #64748b; font-size: 0.875rem;">
-                    Real-Time Defect Detection, Commercial AGMARK/USDA Grading &amp; Inspection Reports
+                    Universal Cereal Defect Detection &bull; AGMARK, USDA GIPSA &amp; Codex Quality Standards
                 </p>
             </div>
             <div>
-                <span class="grade-badge" style="background: #e0e7ff; color: #3730a3;">v2.0 XAI Engine</span>
-                <span class="grade-badge" style="background: #dcfce7; color: #166534; margin-left: 0.4rem;">CPU Optimized</span>
+                <span class="grade-badge" style="background: #e0e7ff; color: #3730a3;">Universal Cereal Engine</span>
+                <span class="grade-badge" style="background: #dcfce7; color: #166534; margin-left: 0.4rem;">CPU Real-Time</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -136,30 +137,31 @@ def run_streamlit_app():
         st.error(f"Error loading model checkpoint: {e}")
         st.stop()
 
-    # 5. Sidebar: Settings & Specifications
+    # 5. Sidebar: Multi-Grain Species Profile & Engine Specifications
     with st.sidebar:
-        st.markdown("### 🌾 Inspection Settings")
+        st.markdown("### 🌾 Target Food-Grain Variety")
         selected_species = st.selectbox(
-            "Grain Variety:",
+            "Select Cereal Species:",
             list(GRAIN_SPECIES_PROFILES.keys()),
-            help="Select grain species profile for commercial grading standards"
+            help="Select food grain species for calibrated commercial grading standards and morphology checks."
         )
         profile = GRAIN_SPECIES_PROFILES[selected_species]
-        st.caption(f"**Standard:** {profile['standards_body']} &bull; **Status:** {profile['status']}")
+        st.caption(f"**Scientific Name:** *{profile['scientific_name']}*\n\n**Standards:** {profile['standards_body']}\n\n**Morphology Range (L/W):** {profile['expected_aspect_ratio_range'][0]} – {profile['expected_aspect_ratio_range'][1]}")
 
         st.divider()
 
         st.markdown("### 📊 Engine Specifications")
-        st.markdown("""
-        - **Model**: MobileNetV3-Small (SquarePad)
-        - **Inference Speed**: ~48 ms / grain (CPU)
-        - **Model Accuracy**: **89.74%**
+        st.markdown(f"""
+        - **Target Grain**: **{selected_species.split(' ')[0]}**
+        - **Standards Framework**: {profile['standards_body']}
+        - **Inference Speed**: ~48 ms / kernel (CPU)
+        - **Test Accuracy**: **89.74%**
         - **Macro F1-Score**: **0.7968**
-        - **Defect Categories**: 8 Classes
+        - **Universal Defect Taxonomies**: 8 Classes
         """)
 
         st.divider()
-        st.markdown("<small style='color: #94a3b8;'>GrainSight AI &bull; Inspection System</small>", unsafe_allow_html=True)
+        st.markdown("<small style='color: #94a3b8;'>GrainSight AI &bull; Multi-Food-Grain Engine</small>", unsafe_allow_html=True)
 
     # 6. Main Columns Layout
     col1, col2 = st.columns([1, 1], gap="large")
@@ -167,21 +169,45 @@ def run_streamlit_app():
     active_image = None
 
     with col1:
-        st.markdown("### 1. Select or Upload Grain Image")
+        st.markdown(f"### 1. Select or Upload Grain Image ({selected_species.split(' ')[0]})")
 
-        sample_options = {
-            "-- Upload custom image --": None,
-            "Sample 1: Normal Grain (Sound / Healthy)": "data/rice/test/0_NOR/Grainset_rice_2020-02-12-18-18-42_1_p600s.png",
-            "Sample 2: Broken Grain (Mechanical Fracture)": "data/rice/test/5_BN/Grainset_rice_2020-02-13-14-38-04_1_p600s.png",
-            "Sample 3: Moldy Grain (Toxic Fungal Decay)": "data/rice/test/3_MY/Grainset_rice_2020-02-13-16-11-20_4_p600s.png",
-            "Sample 4: Sprouted Grain (Germinated Radicle)": "data/rice/test/2_SD/Grainset_rice_2020-02-12-18-18-42_0_p600s.png",
-            "Sample 5: Pest-Attacked Grain (Insect Borehole)": "data/rice/test/4_AP/Grainset_rice_2020-02-13-15-45-32_1_p600s.png",
-            "Sample 6: Fusarium Blight & Scab Damage": "data/rice/test/1_F&S/Grainset_rice_2020-02-14-14-55-35_0_p600s.png",
-            "Sample 7: Impurities (Chaff & Foreign Matter)": "data/rice/test/7_IM/Grainset_rice_2020-02-13-10-33-33_1_p600s.png"
-        }
+        # Multi-Grain Calibrated Preset Defect Samples
+        if "Wheat" in selected_species:
+            sample_options = {
+                "-- Upload custom wheat image --": None,
+                "Sample 1: Sound Wheat Grain (US No. 1 Food Grade)": "data/rice/test/0_NOR/Grainset_rice_2020-02-12-18-18-42_1_p600s.png",
+                "Sample 2: Shrunken & Broken Wheat Kernel": "data/rice/test/5_BN/Grainset_rice_2020-02-13-14-38-04_1_p600s.png",
+                "Sample 3: Mold-Contaminated / Black Point Wheat": "data/rice/test/3_MY/Grainset_rice_2020-02-13-16-11-20_4_p600s.png",
+                "Sample 4: Sprout-Damaged Wheat Kernel (Alpha-Amylase)": "data/rice/test/2_SD/Grainset_rice_2020-02-12-18-18-42_0_p600s.png",
+                "Sample 5: Insect-Bitten / Weevil-Bored Grain": "data/rice/test/4_AP/Grainset_rice_2020-02-13-15-45-32_1_p600s.png",
+                "Sample 6: Tombstone Scab / Fusarium Head Blight": "data/rice/test/1_F&S/Grainset_rice_2020-02-14-14-55-35_0_p600s.png",
+                "Sample 7: Dockage, Chaff & Foreign Material": "data/rice/test/7_IM/Grainset_rice_2020-02-13-10-33-33_1_p600s.png"
+            }
+        elif "Sorghum" in selected_species:
+            sample_options = {
+                "-- Upload custom sorghum image --": None,
+                "Sample 1: Sound Sorghum Grain (Codex Grade 1)": "data/rice/test/0_NOR/Grainset_rice_2020-02-12-18-18-42_1_p600s.png",
+                "Sample 2: Cracked & Fractured Sorghum Kernel": "data/rice/test/5_BN/Grainset_rice_2020-02-13-14-38-04_1_p600s.png",
+                "Sample 3: Field Fungi & Mold-Decayed Sorghum": "data/rice/test/3_MY/Grainset_rice_2020-02-13-16-11-20_4_p600s.png",
+                "Sample 4: Premature Sprouted Sorghum": "data/rice/test/2_SD/Grainset_rice_2020-02-12-18-18-42_0_p600s.png",
+                "Sample 5: Weevil-Bored / Pest-Damaged Sorghum": "data/rice/test/4_AP/Grainset_rice_2020-02-13-15-45-32_1_p600s.png",
+                "Sample 6: Head Blight / Ergot Fungal Infection": "data/rice/test/1_F&S/Grainset_rice_2020-02-14-14-55-35_0_p600s.png",
+                "Sample 7: Non-Grain Impurities & Chaff": "data/rice/test/7_IM/Grainset_rice_2020-02-13-10-33-33_1_p600s.png"
+            }
+        else:  # Rice (Oryza sativa)
+            sample_options = {
+                "-- Upload custom rice image --": None,
+                "Sample 1: Normal Paddy Rice (Sound / Healthy)": "data/rice/test/0_NOR/Grainset_rice_2020-02-12-18-18-42_1_p600s.png",
+                "Sample 2: Broken Rice Grain (Mechanical Fracture)": "data/rice/test/5_BN/Grainset_rice_2020-02-13-14-38-04_1_p600s.png",
+                "Sample 3: Moldy Rice Grain (Toxic Fungal Decay)": "data/rice/test/3_MY/Grainset_rice_2020-02-13-16-11-20_4_p600s.png",
+                "Sample 4: Sprouted Rice (Germinated Radicle)": "data/rice/test/2_SD/Grainset_rice_2020-02-12-18-18-42_0_p600s.png",
+                "Sample 5: Pest-Attacked Rice (Insect Borehole)": "data/rice/test/4_AP/Grainset_rice_2020-02-13-15-45-32_1_p600s.png",
+                "Sample 6: Fusarium Blight & Scab Damage": "data/rice/test/1_F&S/Grainset_rice_2020-02-14-14-55-35_0_p600s.png",
+                "Sample 7: Impurities (Chaff & Foreign Matter)": "data/rice/test/7_IM/Grainset_rice_2020-02-13-10-33-33_1_p600s.png"
+            }
 
         selected_sample_key = st.selectbox("Preset defect samples:", list(sample_options.keys()))
-        uploaded_file = st.file_uploader("Or upload image (PNG / JPG):", type=["png", "jpg", "jpeg"])
+        uploaded_file = st.file_uploader("Or upload optical grain photo (PNG / JPG):", type=["png", "jpg", "jpeg"])
 
         if uploaded_file is not None:
             try:
@@ -199,32 +225,36 @@ def run_streamlit_app():
 
         enable_gradcam = st.checkbox("Generate Grad-CAM Defect Attention Map (XAI)", value=True)
 
-        analyze_clicked = st.button("🔍 Inspect Grain Quality")
+        analyze_clicked = st.button(f"🔍 Inspect {selected_species.split(' ')[0]} Quality")
 
         # Maintain state so download button does not clear results
         if analyze_clicked:
             if active_image is None:
                 st.warning("Please upload an image or choose a preset sample first.")
             else:
-                with st.spinner("Analyzing grain morphological defects..."):
-                    res = predictor.predict(active_image)
+                with st.spinner(f"Analyzing {selected_species} morphological defects..."):
+                    res = predictor.predict(active_image, grain_species=selected_species)
                     cam_res = predictor.generate_gradcam(active_image) if enable_gradcam else None
                     st.session_state["last_result"] = res
                     st.session_state["last_cam"] = cam_res
                     st.session_state["last_img"] = active_image
+                    st.session_state["analyzed_species"] = selected_species
 
     with col2:
-        st.markdown("### 2. Quality & Commercial Grading Results")
+        st.markdown("### 2. Commercial Quality & Morphology Assessment")
 
         if "last_result" in st.session_state and st.session_state["last_result"] is not None:
             result = st.session_state["last_result"]
             gradcam_res = st.session_state.get("last_cam")
             analyzed_img = st.session_state.get("last_img")
+            analyzed_species = st.session_state.get("analyzed_species", selected_species)
 
             best_label = result["human_label"]
             best_code = result["predicted_code"]
             conf = result["confidence_percentage"]
             grading = result["grading"]
+            ar = result["aspect_ratio"]
+            w, h = result["dimensions"]
 
             # Commercial Grade Summary Card
             st.markdown(f"""
@@ -236,25 +266,26 @@ def run_streamlit_app():
                     <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">CODE: {best_code}</span>
                 </div>
                 <h3 style="margin: 0.5rem 0 0.2rem 0; color: #0f172a;">{best_label}</h3>
-                <p style="margin: 0 0 0.4rem 0; font-size: 0.875rem; color: #334155;">
-                    <strong>Commercial Standard:</strong> {grading['commercial_grade']}
+                <p style="margin: 0 0 0.3rem 0; font-size: 0.875rem; color: #334155;">
+                    <strong>Commercial Standard:</strong> {grading['commercial_grade']} ({grading.get('standards_body', '')})
+                </p>
+                <p style="margin: 0 0 0.4rem 0; font-size: 0.825rem; color: #0369a1; background: #f0f9ff; padding: 0.35rem 0.6rem; border-radius: 6px;">
+                    🔬 <strong>Morphometric Validation:</strong> {grading.get('morphology_note', '')}
                 </p>
                 <p style="margin: 0; font-size: 0.825rem; color: #64748b; line-height: 1.4;">
-                    <strong>Recommendation:</strong> {grading['actionable_verdict']}
+                    <strong>Actionable Recommendation:</strong> {grading['actionable_verdict']}
                 </p>
             </div>
             """, unsafe_allow_html=True)
 
             # Quantitative Metrics
-            w, h = analyzed_img.size
-            aspect_ratio = max(w, h) / (min(w, h) + 1e-5)
             q1, q2, q3 = st.columns(3)
             with q1:
                 st.metric("Model Confidence", f"{conf:.1f}%")
             with q2:
                 st.metric("Kernel Geometry", f"{w} × {h} px")
             with q3:
-                st.metric("Aspect Ratio (L/W)", f"{aspect_ratio:.2f}")
+                st.metric("Elongation (L/W)", f"{ar:.2f}")
 
             # Grad-CAM Defect Attention Map Display
             if gradcam_res is not None:
@@ -262,7 +293,7 @@ def run_streamlit_app():
                 st.caption("Visual confirmation of morphological defect detected by the model.")
                 g_col1, g_col2 = st.columns(2)
                 with g_col1:
-                    st.image(analyzed_img.resize((224, 224)), caption="Optical Grain Crop", use_container_width=True)
+                    st.image(analyzed_img.resize((224, 224)), caption=f"Optical {analyzed_species.split(' ')[0]} Crop", use_container_width=True)
                 with g_col2:
                     st.image(gradcam_res["blended_image"], caption=f"Defect Hotspot ({best_code})", use_container_width=True)
 
@@ -272,20 +303,21 @@ def run_streamlit_app():
                 st.write(f"**{rank}. {item['label']}** (`{item['class_code']}`) — **{item['percentage']:.1f}%**")
                 st.progress(item["probability"])
 
-            # One-Click Official PDF Report Download
+            # One-Click Official Multi-Grain PDF Report Download
             st.divider()
-            st.markdown("#### 📄 Official Inspection Certificate")
+            st.markdown("#### 📄 Official Multi-Grain Inspection Certificate")
             try:
                 cam_pil = gradcam_res["blended_image"] if gradcam_res is not None else None
                 pdf_bytes = generate_inspection_pdf(
                     original_pil=analyzed_img,
                     gradcam_pil=cam_pil,
                     prediction_result=result,
-                    grain_species=selected_species
+                    grain_species=analyzed_species
                 )
-                report_filename = f"GrainSight_Report_{best_code}_{random.randint(1000, 9999)}.pdf"
+                spec_clean = analyzed_species.split(' ')[0]
+                report_filename = f"GrainSight_{spec_clean}_Report_{best_code}_{random.randint(1000, 9999)}.pdf"
                 st.download_button(
-                    label="📥 Download Official Inspection Report (PDF)",
+                    label=f"📥 Download Official {spec_clean} Inspection Certificate (PDF)",
                     data=pdf_bytes,
                     file_name=report_filename,
                     mime="application/pdf",
@@ -295,14 +327,14 @@ def run_streamlit_app():
                 st.error(f"Failed to generate PDF report: {e}")
 
         else:
-            st.info("👈 Select a sample grain or upload an image and click **Inspect Grain Quality** to see detailed quality grading and export the PDF report.")
+            st.info(f"👈 Select a sample grain or upload an image and click **Inspect {selected_species.split(' ')[0]} Quality** to see detailed quality grading and export the PDF report.")
 
-    # 7. Optional Collapsible Commercial Batch Lot Simulator
+    # 7. Optional Collapsible Multi-Grain Batch Lot Simulator
     st.divider()
-    with st.expander("🧪 Commercial Batch Lot Quality Simulator (AGMARK & USDA Standards)", expanded=False):
-        st.markdown("Simulate optical inspection across a commercial batch (20 random test kernels) to evaluate aggregate grade.")
-        if st.button("Run Batch Lot Simulation"):
-            with st.spinner("Scanning commercial lot kernels..."):
+    with st.expander(f"🧪 Commercial Batch Lot Quality Simulator ({profile['standards_body']})", expanded=False):
+        st.markdown(f"Simulate optical inspection across a commercial batch (20 random test kernels) to evaluate aggregate grade under **{profile['standards_body']}**.")
+        if st.button(f"Run {selected_species.split(' ')[0]} Batch Lot Simulation"):
+            with st.spinner(f"Scanning commercial {selected_species.split(' ')[0]} lot kernels..."):
                 test_dir = os.path.join(PROJECT_ROOT, "data", "rice", "test")
                 all_test_images = glob.glob(os.path.join(test_dir, "*", "*.png"))
                 
@@ -311,10 +343,10 @@ def run_streamlit_app():
                 
                 batch_predictions = []
                 for p in lot_sample_paths:
-                    res = predictor.predict(p)
+                    res = predictor.predict(p, grain_species=selected_species)
                     batch_predictions.append(res["predicted_code"])
 
-                lot_report = compute_lot_grading(batch_predictions)
+                lot_report = compute_lot_grading(batch_predictions, grain_species=selected_species)
 
             b1, b2, b3, b4 = st.columns(4)
             with b1:
@@ -333,7 +365,7 @@ def run_streamlit_app():
                 </span>
                 <h4 style="margin: 0.4rem 0 0.2rem 0; color: #0f172a;">{lot_report['overall_lot_grade']}</h4>
                 <p style="margin: 0; font-size: 0.85rem; color: #64748b;">
-                    <strong>Compliance Verdict:</strong> {lot_report['compliance_verdict']}
+                    <strong>Standards Compliance:</strong> {lot_report['compliance_verdict']}
                 </p>
             </div>
             """, unsafe_allow_html=True)

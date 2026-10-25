@@ -98,10 +98,14 @@ class RiceGrainPredictor:
         else:
             raise TypeError(f"Unsupported image type: {type(image_input)}")
 
-    def predict(self, image_input):
-        """Runs single-grain classification and commercial grading inference."""
+    def predict(self, image_input, grain_species="Rice (Oryza sativa)"):
+        """Runs single-grain classification and commercial grading inference with species awareness."""
         img = self._load_image(image_input)
         tensor = self.transform(img).unsqueeze(0).to(self.device)
+
+        # Morphological aspect ratio calculation
+        w, h = img.size
+        aspect_ratio = max(w, h) / (min(w, h) + 1e-5)
 
         with torch.no_grad():
             logits = self.model(tensor)
@@ -123,14 +127,22 @@ class RiceGrainPredictor:
         best_code = self.idx_to_class[best_idx]
         best_confidence = float(top_k.values[0].item())
 
-        # Commercial grade assignment
-        grade_info = grade_single_kernel(best_code, best_confidence)
+        # Species-aware commercial grade assignment
+        grade_info = grade_single_kernel(
+            best_code,
+            best_confidence,
+            grain_species=grain_species,
+            aspect_ratio=aspect_ratio
+        )
 
         return {
             "predicted_code": best_code,
             "human_label": HUMAN_LABELS.get(best_code, best_code),
             "confidence": round(best_confidence, 4),
             "confidence_percentage": round(best_confidence * 100, 2),
+            "grain_species": grain_species,
+            "aspect_ratio": round(aspect_ratio, 2),
+            "dimensions": (w, h),
             "top3_predictions": top3,
             "all_probabilities": {k: round(v, 4) for k, v in all_probs.items()},
             "grading": grade_info

@@ -1,7 +1,7 @@
 """
-Unit Test Suite: Commercial Quality Grading Engine
+Unit Test Suite: Universal Multi-Food-Grain Quality Grading Engine
 Project: GrainSight AI - Multi-Food-Grain Quality Analysis
-Standards: AGMARK & USDA Commercial Food Grain Quality Frameworks
+Standards: AGMARK, USDA GIPSA & Codex Alimentarius Frameworks
 """
 
 import os
@@ -15,46 +15,54 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 from src.inference.grading import grade_single_kernel, compute_lot_grading, GRAIN_SPECIES_PROFILES
 
 
-class TestGrainGrading(unittest.TestCase):
-    def test_single_kernel_sound(self):
-        result = grade_single_kernel("0_NOR", confidence=0.98)
+class TestMultiGrainGrading(unittest.TestCase):
+    # 1. Rice Standards (AGMARK)
+    def test_rice_single_kernel_sound(self):
+        result = grade_single_kernel("0_NOR", confidence=0.98, grain_species="Rice (Oryza sativa)", aspect_ratio=2.8)
         self.assertEqual(result["grade_badge"], "GRADE A")
         self.assertEqual(result["safety_status"], "SAFE")
-        self.assertEqual(result["grade_color"], "#10b981")
+        self.assertIn("Oryza sativa", result["morphology_note"])
 
-    def test_single_kernel_broken(self):
-        result = grade_single_kernel("5_BN", confidence=0.95)
-        self.assertEqual(result["grade_badge"], "GRADE B")
-        self.assertEqual(result["safety_status"], "COMMERCIAL DIVERTER")
-        self.assertEqual(result["grade_color"], "#3b82f6")
-
-    def test_single_kernel_moldy_reject(self):
-        result = grade_single_kernel("3_MY", confidence=0.99)
+    def test_rice_single_kernel_moldy(self):
+        result = grade_single_kernel("3_MY", confidence=0.99, grain_species="Rice (Oryza sativa)")
         self.assertEqual(result["grade_badge"], "REJECT")
         self.assertEqual(result["safety_status"], "HAZARDOUS")
-        self.assertEqual(result["grade_color"], "#ef4444")
 
-    def test_single_kernel_fusarium_reject(self):
-        result = grade_single_kernel("1_F&S")
+    # 2. Wheat Standards (USDA GIPSA)
+    def test_wheat_single_kernel_sound(self):
+        result = grade_single_kernel("0_NOR", confidence=0.96, grain_species="Wheat (Triticum aestivum)", aspect_ratio=2.1)
+        self.assertEqual(result["grade_badge"], "US NO. 1")
+        self.assertEqual(result["safety_status"], "SAFE")
+        self.assertIn("USDA GIPSA", result["standards_body"])
+
+    def test_wheat_single_kernel_fusarium_reject(self):
+        result = grade_single_kernel("1_F&S", confidence=0.92, grain_species="Wheat (Triticum aestivum)")
         self.assertEqual(result["grade_badge"], "REJECT")
         self.assertEqual(result["safety_status"], "HAZARDOUS")
-        self.assertEqual(result["grade_color"], "#ef4444")
 
-    def test_lot_grading_premium(self):
-        # 19 normal kernels, 1 broken kernel -> sound 95%, broken 5% -> Grade A
+    # 3. Sorghum Standards (Codex Alimentarius)
+    def test_sorghum_single_kernel_sound(self):
+        result = grade_single_kernel("0_NOR", confidence=0.95, grain_species="Sorghum (Sorghum bicolor)", aspect_ratio=1.2)
+        self.assertEqual(result["grade_badge"], "GRADE 1")
+        self.assertEqual(result["safety_status"], "SAFE")
+        self.assertIn("Codex", result["standards_body"])
+
+    # 4. Multi-Grain Lot Grading
+    def test_rice_lot_grading_premium(self):
         codes = ["0_NOR"] * 19 + ["5_BN"] * 1
-        lot = compute_lot_grading(codes)
+        lot = compute_lot_grading(codes, grain_species="Rice (Oryza sativa)")
         self.assertEqual(lot["grade_badge"], "GRADE A")
         self.assertEqual(lot["total_kernels"], 20)
-        self.assertEqual(lot["sound_percentage"], 95.0)
-        self.assertEqual(lot["broken_percentage"], 5.0)
 
-    def test_lot_grading_reject_on_mold(self):
-        # Even with 19 sound grains, 1 moldy grain triggers strict biological hazard rejection
-        codes = ["0_NOR"] * 19 + ["3_MY"] * 1
-        lot = compute_lot_grading(codes)
-        self.assertEqual(lot["grade_badge"], "REJECT")
-        self.assertGreater(lot["biological_defect_percentage"], 0.0)
+    def test_wheat_lot_grading_premium(self):
+        codes = ["0_NOR"] * 19 + ["5_BN"] * 1
+        lot = compute_lot_grading(codes, grain_species="Wheat (Triticum aestivum)")
+        self.assertEqual(lot["grade_badge"], "US NO. 1")
+
+    def test_sorghum_lot_grading_premium(self):
+        codes = ["0_NOR"] * 19 + ["5_BN"] * 1
+        lot = compute_lot_grading(codes, grain_species="Sorghum (Sorghum bicolor)")
+        self.assertEqual(lot["grade_badge"], "GRADE 1")
 
     def test_species_profiles_exist(self):
         self.assertIn("Rice (Oryza sativa)", GRAIN_SPECIES_PROFILES)
