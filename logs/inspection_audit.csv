@@ -1,3 +1,4 @@
 Timestamp,Certificate_ID,Grain_Species,Class_Code,Defect_Label,Confidence_Pct,Commercial_Grade,Safety_Status,Estimated_Moisture_Pct,Storage_Risk,Grain_Area_Px,Defect_Area_Px,Aspect_Ratio
 2026-10-25 18:29:53,GS-TEST-001,Rice (Oryza sativa),0_NOR,Normal Grain (Sound / Healthy),97.80,GRADE A,Commercial Food Grade,12.6%,OPTIMAL_SAFE,5000,200,2.45
 2026-10-25 18:30:20,GS-TEST-001,Rice (Oryza sativa),0_NOR,Normal Grain (Sound / Healthy),97.80,GRADE A,Commercial Food Grade,12.6%,OPTIMAL_SAFE,5000,200,2.45
+2026-10-25 18:32:13,GS-20261025-6_-695,Wheat (Triticum aestivum),6_UN,Unripe / Immature Grain (Chalky / Green),99.66,US NO. 2,COMMERCIAL DIVERTER,15.4%,ELEVATED_RISK,13426,9592,1.00
