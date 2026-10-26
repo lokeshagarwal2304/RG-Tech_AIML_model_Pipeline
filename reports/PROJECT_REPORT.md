@@ -1,7 +1,8 @@
 # 🌾 GrainSight AI: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning
 
 **Comprehensive Engineering & Research Project Report**  
-*Submission Challenge: Problem 1 — Multi-Food-Grain Quality Analysis & Prediction*
+*Submission Challenge: Problem 1 — Multi-Food-Grain Quality Analysis & Prediction*  
+*Submission Date: October 26, 2026*
 
 ---
 

@@ -1,3 +1,8 @@
+"""
+GrainSight AI: Multi-Observer Cohen's Kappa Inter-Rater Reliability Analyzer
+Author: Lokesh Agarwal | Updated: October 26, 2026
+"""
+
 import os
 import numpy as np
 import pandas as pd

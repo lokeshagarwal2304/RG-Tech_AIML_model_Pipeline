@@ -1,5 +1,9 @@
 # Leakage-Free Dataset Split Manifest
 
+**Author:** Lokesh Agarwal  
+**Date:** October 26, 2026  
+**Repository:** https://github.com/lokeshagarwal2304/RG-Tech_AIML_model_Pipeline  
+
 ## Overview
 This directory contains the session-grouped, leakage-resistant split manifest for the GrainDet-Rice dataset (`data/rice/`), designed for reproducible, leak-free computer vision experimentation.
 

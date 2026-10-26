@@ -1,12 +1,14 @@
 # 🌾 GrainSight AI: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning
 
+[![Author](https://img.shields.io/badge/Author-Lokesh%20Agarwal-blue.svg)](https://github.com/lokeshagarwal2304)
+[![Updated](https://img.shields.io/badge/Updated-October%202026-green.svg)](https://github.com/lokeshagarwal2304/RG-Tech_AIML_model_Pipeline)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Standards](https://img.shields.io/badge/Standards-AGMARK%20%7C%20USDA-emerald.svg)](#commercial-quality-grading)
 [![Data Leakage](https://img.shields.io/badge/Data%20Leakage-0.0%25%20(Session--Grouped)-success.svg)](#leakage-free-dataset-splits)
 
-> **GrainSight AI** is an end-to-end, reproducible deep learning and generative AI platform for automated optical food-grain defect classification, rare-class synthetic data augmentation using conditional diffusion models (DDPM), Explainable AI (Grad-CAM defect localization), and industrial commercial quality grading (AGMARK & USDA standards).
+> **GrainSight AI** by **Lokesh Agarwal** (Hyderabad, Telangana, India) is an end-to-end, reproducible deep learning and generative AI platform for automated optical food-grain defect classification, rare-class synthetic data augmentation using conditional diffusion models (DDPM), Explainable AI (Grad-CAM defect localization), and industrial commercial quality grading (AGMARK & USDA standards).
 
 ---
 

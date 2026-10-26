@@ -1,7 +1,7 @@
 """
 GrainSight AI: Downstream Comparative Retraining Script
 Project: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning
-Author: Senior ML Research Engineer
+Author: Lokesh Agarwal | Contact: lokeshagarwal2304@gmail.com | Updated: October 26, 2026
 
 Usage:
     & ".\.venv\Scripts\python.exe" train_diffusion_augmented.py [--epochs 3] [--batch_size 64]

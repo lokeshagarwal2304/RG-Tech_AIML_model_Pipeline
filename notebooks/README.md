@@ -1,5 +1,7 @@
 # GrainSight AI: Google Colab Diffusion Augmentation Workflow (v2.0)
 
+**Author:** Lokesh Agarwal  
+**Date:** October 26, 2026  
 **Project**: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning  
 **Notebook Version**: [`notebooks/diffusion_augmentation_v2_colab.ipynb`](file:///C:/Users/Lokesh%20Agarwal/.gemini/antigravity/scratch/RG-Tech_AIML_model_Pipeline/notebooks/diffusion_augmentation_v2_colab.ipynb)  
 **Target Rare Defect Classes**: `2_SD` (Sprouted Damage) & `1_F&S` (Fusarium Blight & Scab)  

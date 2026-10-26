@@ -1,7 +1,7 @@
 """
 GrainSight AI: Universal Multi-Food-Grain Quality Analysis Portal
 Project: Multi-Food-Grain Quality Analysis Using Diffusion Models and Deep Learning
-Author: Senior ML Research Engineer
+Author: Lokesh Agarwal | Contact: +91 9154151265 | lokeshagarwal2304@gmail.com | Updated: October 26, 2026
 
 A clean, production-grade multi-cereal inspection interface complying with Problem 1:
 - Universal Cereal Defect Classification (Rice, Wheat, Sorghum, Maize, Chickpeas, Lentils)

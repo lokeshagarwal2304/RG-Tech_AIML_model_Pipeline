@@ -2,7 +2,7 @@
 Baseline Training and Evaluation Script: MobileNetV3-Small (8-Class Rice Classification)
 Project: Multi-Food-Grain Quality Analysis and Prediction Using Advanced Diffusion Models
 
-Author: Senior PyTorch Computer Vision Engineer
+Author: Lokesh Agarwal | Contact: lokeshagarwal2304@gmail.com | Updated: October 26, 2026
 Usage:
     python train_baseline.py [--epochs 3] [--batch_size 64] [--lr 0.001]
 """

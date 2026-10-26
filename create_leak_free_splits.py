@@ -1,7 +1,7 @@
 """
 Leakage-Free Session-Grouped Split Generator
 Project: Multi-Food-Grain Quality Analysis and Prediction Using Advanced Diffusion Models
-Author: Senior ML Research Engineer
+Author: Lokesh Agarwal | Contact: lokeshagarwal2304@gmail.com | Updated: October 26, 2026
 
 Description:
     Partitions the GrainDet rice dataset into train (~70%), validation (~10%), and test (~20%)
