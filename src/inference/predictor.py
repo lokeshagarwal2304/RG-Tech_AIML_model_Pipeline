@@ -251,3 +251,176 @@ class RiceGrainPredictor:
             "defect_pixel_area": defect_px,
             "defect_area_ratio": round(defect_ratio * 100, 2)
         }
+
+    def predict_bunch(self, image_input, grain_species="Rice (Oryza sativa)", min_area=80, max_area=50000):
+        """Multi-Grain Bunch / Tray Scanner:
+        Detects multiple individual grains in a single photo (tray / paper / conveyor),
+        crops each kernel, classifies every grain with MobileNetV3-Small,
+        and annotates the image with color-coded bounding boxes and defect labels:
+          - Emerald Green: Sound / Healthy Grain ('0_NOR')
+          - Crimson Red: Hazardous Biological Defect ('1_F&S', '2_SD', '3_MY', '4_AP')
+          - Amber Yellow: Mechanical / Quality Defect ('5_BN', '6_UN', '7_IM')
+        
+        Returns:
+            annotated_image: PIL.Image with boxes, IDs, and class labels.
+            detections: List of individual grain predictions with bboxes and grades.
+            lot_summary: Cumulative % Sound, % Defective, % Broken, Commercial Lot Grade, and Moisture warning.
+        """
+        import cv2
+
+        img = self._load_image(image_input)
+        img_np = np.array(img)
+        h, w = img_np.shape[:2]
+
+        # Convert to grayscale
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+
+        # Detect background polarity: dark tray vs bright paper/surface
+        mean_val = float(np.mean(gray))
+        if mean_val > 120:
+            # Bright background (white tray / paper) -> Invert threshold
+            _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        else:
+            # Dark background (black optical tray / conveyor)
+            _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        # Clean noise with morphological opening
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
+
+        # Find external contours
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        annotated_np = img_np.copy()
+        detections = []
+        sound_count = 0
+        broken_count = 0
+        hazard_count = 0
+        other_defect_count = 0
+
+        # Sort contours top-to-bottom, left-to-right
+        sorted_contours = []
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if min_area <= area <= max_area:
+                x, y, bw, bh = cv2.boundingRect(cnt)
+                sorted_contours.append((cnt, area, x, y, bw, bh))
+
+        sorted_contours.sort(key=lambda item: (item[3] // 50, item[2]))
+
+        for idx, (cnt, area, x, y, bw, bh) in enumerate(sorted_contours):
+            pad = 4
+            x1 = max(0, x - pad)
+            y1 = max(0, y - pad)
+            x2 = min(w, x + bw + pad)
+            y2 = min(h, y + bh + pad)
+
+            crop_np = img_np[y1:y2, x1:x2]
+            if crop_np.shape[0] < 8 or crop_np.shape[1] < 8:
+                continue
+
+            crop_pil = Image.fromarray(crop_np)
+            pred = self.predict(crop_pil, grain_species=grain_species)
+            code = pred["predicted_code"]
+            conf = pred["confidence_percentage"]
+
+            # Color coding: Green = Sound, Red = Severe/Hazard, Yellow = Broken/Quality
+            if code == "0_NOR":
+                color_rgb = (16, 185, 129)  # Emerald Green
+                status = "Sound"
+                sound_count += 1
+            elif code in ["1_F&S", "2_SD", "3_MY", "4_AP"]:
+                color_rgb = (239, 68, 68)   # Crimson Red
+                status = "Hazard"
+                hazard_count += 1
+            elif code == "5_BN":
+                color_rgb = (245, 158, 11)  # Amber Yellow
+                status = "Broken"
+                broken_count += 1
+            else:
+                color_rgb = (217, 119, 6)   # Deep Amber
+                status = "Defect"
+                other_defect_count += 1
+
+            # Draw rectangle on annotated image
+            cv2.rectangle(annotated_np, (x, y), (x + bw, y + bh), color_rgb, 2)
+
+            # Draw label tag with dark background
+            short_code = code.split("_")[1] if "_" in code else code
+            label_text = f"#{idx + 1} {short_code} {int(conf)}%"
+            (tw, th), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.38, 1)
+
+            box_top = max(0, y - th - 6)
+            cv2.rectangle(annotated_np, (x, box_top), (x + tw + 4, max(th + 6, y)), (15, 23, 42), -1)
+            cv2.putText(
+                annotated_np,
+                label_text,
+                (x + 2, max(th + 2, y - 2)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.38,
+                color_rgb,
+                1,
+                cv2.LINE_AA
+            )
+
+            detections.append({
+                "id": idx + 1,
+                "bbox": [int(x), int(y), int(bw), int(bh)],
+                "class_code": code,
+                "human_label": pred["human_label"],
+                "confidence_percentage": conf,
+                "status": status,
+                "commercial_grade": pred["grading"]["commercial_grade"],
+                "aspect_ratio": pred["aspect_ratio"],
+                "crop_image": crop_pil
+            })
+
+        total_detected = len(detections)
+        if total_detected > 0:
+            sound_pct = round((sound_count / total_detected) * 100, 2)
+            broken_pct = round((broken_count / total_detected) * 100, 2)
+            hazard_pct = round((hazard_count / total_detected) * 100, 2)
+            defect_pct = round(((hazard_count + other_defect_count) / total_detected) * 100, 2)
+
+            # Commercial Lot Grade based on statutory tolerance limits
+            if hazard_pct > 0:
+                lot_grade = "REJECT / SAMPLE GRADE (Hazardous Mold/Toxin Present)"
+                lot_status = "REJECT"
+                moisture_status = "CRITICAL HAZARD (>18% Moisture Risk)"
+            elif defect_pct <= 3.0 and broken_pct <= 10.0:
+                lot_grade = "GRADE A (Premium Export Quality)"
+                lot_status = "PASS"
+                moisture_status = "OPTIMAL SAFE (12.0% - 13.0%)"
+            elif defect_pct <= 8.0 and broken_pct <= 25.0:
+                lot_grade = "GRADE B (Standard Commercial Grade)"
+                lot_status = "PASS"
+                moisture_status = "ACCEPTABLE (13.0% - 14.5%)"
+            else:
+                lot_grade = "GRADE C / REJECT (Substandard Lot Quality)"
+                lot_status = "REJECT"
+                moisture_status = "ELEVATED RISK (>15.0%)"
+        else:
+            sound_pct = broken_pct = hazard_pct = defect_pct = 0.0
+            lot_grade = "NO GRAINS DETECTED"
+            lot_status = "UNKNOWN"
+            moisture_status = "N/A"
+
+        lot_summary = {
+            "total_grains_detected": total_detected,
+            "sound_count": sound_count,
+            "sound_percentage": sound_pct,
+            "broken_count": broken_count,
+            "broken_percentage": broken_pct,
+            "hazard_count": hazard_count,
+            "hazard_percentage": hazard_pct,
+            "defect_percentage": defect_pct,
+            "lot_grade": lot_grade,
+            "lot_status": lot_status,
+            "moisture_status": moisture_status
+        }
+
+        return {
+            "annotated_image": Image.fromarray(annotated_np),
+            "detections": detections,
+            "lot_summary": lot_summary
+        }

@@ -166,7 +166,86 @@ def run_streamlit_app():
         st.divider()
         st.markdown("<small style='color: #94a3b8;'>GrainSight AI &bull; Multi-Food-Grain Engine</small>", unsafe_allow_html=True)
 
-    # 6. Main Columns Layout
+    # 6. Multi-Grain Bunch & Tray Scanner (Practical Farmer & Mandi Inspection)
+    with st.expander("🌾 Multi-Grain Bunch / Handful Scanner (Detect & Grade All Grains in One Photo)", expanded=True):
+        st.markdown("Scan an entire handful or tray of grains from a single photo. The system automatically detects individual grain boundaries, classifies every grain in parallel, and annotates the photo with color-coded bounding boxes.")
+
+        bunch_sample_path = os.path.join(PROJECT_ROOT, "data", "sample_trays", "sample_rice_tray_16_grains.png")
+        b_col1, b_col2 = st.columns([1, 1], gap="large")
+
+        with b_col1:
+            st.markdown(f"#### 1. Choose Multi-Grain Image ({selected_species.split(' ')[0]})")
+            bunch_mode = st.radio("Multi-grain image source:", ["Preset 16-Grain Mixed Quality Tray", "Upload Custom Handful/Tray Photo"], horizontal=True)
+            active_bunch_img = None
+            if bunch_mode == "Preset 16-Grain Mixed Quality Tray":
+                if os.path.exists(bunch_sample_path):
+                    active_bunch_img = Image.open(bunch_sample_path).convert("RGB")
+                    st.image(active_bunch_img, caption="Preset 16-Grain Mixed Test Tray (Rice)", use_container_width=True)
+                else:
+                    st.warning("Sample tray not found. Please upload a photo.")
+            else:
+                bunch_file = st.file_uploader("Upload multi-grain photo (flat sheet / tray / white paper):", type=["png", "jpg", "jpeg"], key="bunch_uploader")
+                if bunch_file:
+                    active_bunch_img = Image.open(bunch_file).convert("RGB")
+                    st.image(active_bunch_img, caption="Uploaded Multi-Grain Image", use_container_width=True)
+
+            scan_bunch_btn = st.button("⚡ Scan & Grade Entire Multi-Grain Bunch", type="primary", use_container_width=True)
+
+        with b_col2:
+            st.markdown("#### 2. Bunch Detection & Quality Grading")
+            if scan_bunch_btn and active_bunch_img is not None:
+                with st.spinner("Detecting and classifying all grains on tray..."):
+                    bunch_results = predictor.predict_bunch(active_bunch_img, grain_species=selected_species)
+                    st.session_state["last_bunch_res"] = bunch_results
+
+            if "last_bunch_res" in st.session_state and st.session_state["last_bunch_res"] is not None:
+                b_res = st.session_state["last_bunch_res"]
+                summary = b_res["lot_summary"]
+
+                # Metrics cards
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Total Grains", summary["total_grains_detected"])
+                m2.metric("Sound Grains", f"{summary['sound_percentage']}%", f"{summary['sound_count']} kernels")
+                m3.metric("Broken Grains", f"{summary['broken_percentage']}%", f"{summary['broken_count']} kernels")
+                m4.metric("Hazard Defects", f"{summary['hazard_percentage']}%", f"{summary['hazard_count']} kernels")
+
+                # Commercial grade card
+                grade_bg = "#10b98120" if summary["lot_status"] == "PASS" else "#ef444420"
+                grade_color = "#10b981" if summary["lot_status"] == "PASS" else "#ef4444"
+                st.markdown(f"""
+                <div class="card" style="border-left: 5px solid {grade_color}; margin: 0.8rem 0;">
+                    <span class="grade-badge" style="background: {grade_bg}; color: {grade_color};">
+                        LOT STATUS: {summary['lot_status']}
+                    </span>
+                    <h3 style="margin: 0.4rem 0 0.2rem 0; color: #0f172a;">{summary['lot_grade']}</h3>
+                    <p style="margin: 0; font-size: 0.85rem; color: #334155;">
+                        <strong>Moisture & Storage Advisory:</strong> {summary['moisture_status']}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.image(b_res["annotated_image"], caption="Annotated Multi-Grain Detection (Green=Sound, Red=Hazard, Yellow=Broken)", use_container_width=True)
+
+                # Expandable detailed breakdown
+                with st.expander(f"🔍 View Breakdown of All {summary['total_grains_detected']} Detected Grains", expanded=False):
+                    table_rows = []
+                    for det in b_res["detections"]:
+                        table_rows.append({
+                            "ID": f"#{det['id']}",
+                            "Class Code": det["class_code"],
+                            "Defect Category": det["human_label"],
+                            "Confidence": f"{det['confidence_percentage']}%",
+                            "Status": det["status"],
+                            "Aspect Ratio": det["aspect_ratio"]
+                        })
+                    st.dataframe(table_rows, use_container_width=True)
+            else:
+                st.info("👈 Select or upload a multi-grain photo and click **Scan & Grade Entire Multi-Grain Bunch** to see all grains detected and color-coded.")
+
+    st.divider()
+
+    # 7. Single Kernel Micro-Inspection & XAI
+    st.markdown("### 🔬 Single Kernel Micro-Inspection & XAI Panel")
     col1, col2 = st.columns([1, 1], gap="large")
 
     active_image = None
